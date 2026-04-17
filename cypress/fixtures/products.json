@@ -1,0 +1,14 @@
+{
+  "backpack": {
+    "key": "sauce-labs-backpack",
+    "name": "Sauce Labs Backpack"
+  },
+  "bikeLight": {
+    "key": "sauce-labs-bike-light",
+    "name": "Sauce Labs Bike Light"
+  },
+  "boltTShirt": {
+    "key": "sauce-labs-bolt-t-shirt",
+    "name": "Sauce Labs Bolt T-Shirt"
+  }
+}

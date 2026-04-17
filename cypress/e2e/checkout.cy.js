@@ -1,77 +1,75 @@
+import CartPage from "../pages/CartPage";
+import CheckoutInfoPage from "../pages/CheckoutInfoPage";
+import CheckoutSummaryPage from "../pages/CheckoutSummaryPage";
+import CheckoutCompletePage from "../pages/CheckoutCompletePage";
+
+const cartPage = new CartPage();
+const checkoutInfoPage = new CheckoutInfoPage();
+const checkoutSummaryPage = new CheckoutSummaryPage();
+const checkoutCompletePage = new CheckoutCompletePage();
+
+let user;
+let products;
+
 describe("End-to-End Checkout Flow", () => {
+  before(() => {
+    cy.fixture("checkoutUser").then((data) => {
+      user = data;
+    });
+    cy.fixture("products").then((data) => {
+      products = data;
+    });
+  });
+
   beforeEach(() => {
     cy.visit("/");
     cy.login();
   });
 
   it("completes full order flow and confirms order", () => {
-    // Add product to cart and verify badge
-    cy.get('[data-test="add-to-cart-sauce-labs-backpack"]').click();
-    cy.get('[data-test="shopping-cart-badge"]').should("have.text", "1");
+    cartPage.addToCart(products.backpack.key);
+    cartPage.cartBadge().should("have.text", "1");
 
-    // Navigate to cart and verify item is there
-    cy.get('[data-test="shopping-cart-link"]').click();
+    cartPage.goToCart();
     cy.url().should("include", "/cart");
-    cy.get('[data-test="inventory-item-name"]').should(
-      "have.text",
-      "Sauce Labs Backpack",
-    );
+    cartPage.inventoryItemNames().should("have.text", products.backpack.name);
 
-    // Proceed to checkout
-    cy.get('[data-test="checkout"]').click();
-
-    // Fill out checkout info
+    cartPage.proceedToCheckout();
     cy.url().should("include", "/checkout-step-one");
-    cy.get('[data-test="firstName"]').type("firstName");
-    cy.get('[data-test="lastName"]').type("lastName");
-    cy.get('[data-test="postalCode"]').type("1234");
-    cy.get('[data-test="continue"]').click();
 
-    // Verify order summary
+    checkoutInfoPage.fillInfo(user.firstName, user.lastName, user.postalCode);
     cy.url().should("include", "/checkout-step-two");
-    cy.get('[data-test="inventory-item-name"]').should(
-      "have.text",
-      "Sauce Labs Backpack",
-    );
 
-    // Grab price from UI and assert subtotal matches
-    cy.get('[data-test="inventory-item-price"]')
+    checkoutSummaryPage.itemName().should("have.text", products.backpack.name);
+    checkoutSummaryPage
+      .itemPrice()
       .invoke("text")
       .then((priceText) => {
         const price = parseFloat(priceText.replace("$", ""));
         const expectedTax = parseFloat((price * 0.08).toFixed(2));
         const expectedTotal = parseFloat((price + expectedTax).toFixed(2));
 
-        cy.get('[data-test="subtotal-label"]').should(
-          "have.text",
-          `Item total: $${price.toFixed(2)}`,
-        );
-        cy.get('[data-test="tax-label"]').should(
-          "have.text",
-          `Tax: $${expectedTax.toFixed(2)}`,
-        );
-        cy.get('[data-test="total-label"]').should(
-          "have.text",
-          `Total: $${expectedTotal.toFixed(2)}`,
-        );
+        checkoutSummaryPage
+          .subtotalLabel()
+          .should("have.text", `Item total: $${price.toFixed(2)}`);
+        checkoutSummaryPage
+          .taxLabel()
+          .should("have.text", `Tax: $${expectedTax.toFixed(2)}`);
+        checkoutSummaryPage
+          .totalLabel()
+          .should("have.text", `Total: $${expectedTotal.toFixed(2)}`);
       });
 
-    // Just visible for payment and shipping since values could change
-    cy.get('[data-test="payment-info-value"]').should("be.visible");
-    cy.get('[data-test="shipping-info-value"]').should("be.visible");
+    checkoutSummaryPage.paymentInfo().should("be.visible");
+    checkoutSummaryPage.shippingInfo().should("be.visible");
 
-    // Finish order
-    cy.get('[data-test="finish"]').click();
-
-    // Verify confirmation message
+    checkoutSummaryPage.finish();
     cy.url().should("include", "/checkout-complete");
-    cy.get('[data-test="complete-header"]').should(
-      "have.text",
-      "Thank you for your order!",
-    );
 
-    // Go back home and verify
-    cy.get('[data-test="back-to-products"]').click();
+    checkoutCompletePage
+      .confirmationHeader()
+      .should("have.text", "Thank you for your order!");
+    checkoutCompletePage.backHome();
     cy.url().should("include", "/inventory");
   });
 });
